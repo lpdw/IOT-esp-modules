@@ -1,0 +1,2 @@
+* `src/` sources, croquis/projet arduino (un sous dossier = un croquis arduino, créé par défaut avec l'arduino) + firmware (`.bin`) encore en dev (créés par défaut avec l'export arduino)
+* `dist/` firmware (`.bin`) finaux, prêt à être flashés + schema montage et readme.md  (un dossier = un montage/module esp)
