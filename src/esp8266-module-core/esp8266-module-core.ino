@@ -31,8 +31,8 @@
  * @brief Default WiFi connection information.
  * @{
  */
-const char* ap_default_ssid = "blablablah";//"esp8266-"+(const char*)String(ESP.getChipId(), HEX); ///< Default SSID.
-const char* ap_default_psk = ap_default_ssid; ///< Default PSK.
+//const char* ap_default_ssid = "";
+//const char* ap_default_psk = ""; ///< Default PSK.
 /// @}
 
 /// Uncomment the next line for verbose output over UART.
@@ -234,10 +234,10 @@ void setup()
     delay(10);
 
     String chipid = String(ESP.getChipId(), HEX);
-    String __ap_def_ssid = "esp8266-"+chipid;
-    char ap_def_ssid[] = "";
-    __ap_def_ssid.toCharArray(ap_def_ssid, __ap_def_ssid.length()+1);
-    WiFi.softAP(ap_def_ssid, ap_default_psk);
+    String __ap_default_ssid = "esp8266-"+chipid;
+    char ap_default_ssid[] = "";
+    __ap_default_ssid.toCharArray(ap_default_ssid, __ap_default_ssid.length()+1);
+    WiFi.softAP(ap_default_ssid, ap_default_ssid);//ap_default_ssid = ap_default_psk
 
     Serial.print("IP address: ");
     Serial.println(WiFi.softAPIP());
