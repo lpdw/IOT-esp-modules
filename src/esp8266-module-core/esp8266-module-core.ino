@@ -31,8 +31,10 @@
  * @brief Default WiFi connection information.
  * @{
  */
-//const char* ap_default_ssid = "";
-//const char* ap_default_psk = ""; ///< Default PSK.
+String chipid = String(ESP.getChipId(), HEX);
+String __ap_default_ssid = "esp8266-"+chipid;
+const char* ap_default_ssid = (const char *)__ap_default_ssid.c_str();
+const char* ap_default_psk = ap_default_ssid;
 /// @}
 
 /// Uncomment the next line for verbose output over UART.
@@ -233,17 +235,15 @@ void setup()
 
     delay(10);
 
-    String chipid = String(ESP.getChipId(), HEX);
-    String __ap_default_ssid = "esp8266-"+chipid;
-    char ap_default_ssid[] = "";
-    __ap_default_ssid.toCharArray(ap_default_ssid, __ap_default_ssid.length()+1);
-    WiFi.softAP(ap_default_ssid, ap_default_ssid);//ap_default_ssid = ap_default_psk
+    WiFi.softAP(ap_default_ssid, ap_default_psk);//ap_default_ssid = ap_default_psk
 
     Serial.print("IP address: ");
     Serial.println(WiFi.softAPIP());
   }
 
   // Start OTA server.
+  //setHostname(ap_default_ssid);//default const char* hostname
+  //setPassword(ap_default_ssid);//default const char* password
   ArduinoOTA.setHostname((const char *)hostname.c_str());
   ArduinoOTA.begin();
 }
