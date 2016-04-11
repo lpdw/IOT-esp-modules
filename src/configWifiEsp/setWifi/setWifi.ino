@@ -9,7 +9,10 @@ bool isServer = false;
 
 char ssid[] = "SSIDEXEMPLEMODULE";
 char password[] = "PASSWORDEXEMPLEMODULE";
-String uuid;
+String uuid = String(ESP.getChipId(), HEX);
+String __ap_default_ssid = "esp8266-"+uuid;
+const char* ap_default_ssid = (const char *)__ap_default_ssid.c_str();
+const char* ap_default_psk = ap_default_ssid;
 String type;
 String label;
 String ipHub;
@@ -44,7 +47,7 @@ void setWifiAccesPoint(){
   Serial.println("Configuring access point...");
   WiFi.disconnect();
   delay(100);
-  WiFi.softAP("AutoConfigWifi", "1234567890");
+  WiFi.softAP(ap_default_ssid, ap_default_psk);
   IPAddress myIP = WiFi.softAPIP();
   Serial.print("AP IP address: ");
   Serial.println(myIP);
