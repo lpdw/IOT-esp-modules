@@ -13,8 +13,10 @@ String uuid = String(ESP.getChipId(), HEX);
 String __ap_default_ssid = "esp8266-"+uuid;
 const char* ap_default_ssid = (const char *)__ap_default_ssid.c_str();
 const char* ap_default_psk = ap_default_ssid;
-String type;
-String label;
+/* if module is output module (0) or input module (1) */
+int type = 0;
+/* Description of the module */
+String label = "Test Module";
 String ipHub;
 
 ESP8266WebServer server(80);
@@ -26,19 +28,33 @@ bool readConfig(){
       Serial.println("file open failed");
       return false;
   }else{
-    for(int i = 0; i < 2; i++){
-      String s=f.readStringUntil('\n');
-      config[i] = s;
-      Serial.println("Line : " + i);
-      Serial.println(s);
+    String content = f.readString();
+    f.close();
+    content.trim();
+    
+    int8_t pos = content.indexOf("\r\n");
+    uint8_t le = 2;
+    if (pos == -1)
+    {
+      le = 1;
+      pos = content.indexOf("\n");
+      if (pos == -1)
+      {
+        pos = content.indexOf("\r");
+      }
     }
-    /*Check if line 1 and 2 (SSID and Password) are not missing*/
-    if(config[0].length() == 0 || config[1].length() == 0 ){
-      Serial.println("Config not ok");
+  
+    // If there is no second line: Some information is missing.
+    if (pos == -1)
+    {
+      Serial.println("Infvalid content.");
+      Serial.println(content);
       return false;
-    }else{
-     return true; 
     }
+    Serial.println("Ok config");
+    String test = content.substring(0, pos);
+    Serial.println(test);
+    return false;
   }
 }
 
@@ -82,6 +98,7 @@ void handleConfig(){
     /* Convert String to char array because wifi.begin() method accept only char array */
     __ssid.toCharArray(ssid, __ssid.length()+1);
     __password.toCharArray(password, __password.length()+1);
+    saveConfig();
     setWifiClient();
   }
 }
@@ -104,6 +121,27 @@ void setWifiClient(){
   Serial.println(ssid);
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
+}
+
+void saveConfig(){
+  File f = SPIFFS.open("/config.txt", "w");
+  Serial.println(f);
+  if (!f) {
+      Serial.println("file open failed");
+  }else{
+    Serial.println("Save config");
+    f.println(ssid);
+    f.println(password);
+    f.println(uuid);
+    f.println(type);
+    f.println(label);
+    Serial.println("config");
+    for(int i = 0; i < 5; i++){
+      String s=f.readStringUntil('\n');
+      Serial.println(s);
+    }
+  }
+  f.close();
 }
 
 void setup() {
