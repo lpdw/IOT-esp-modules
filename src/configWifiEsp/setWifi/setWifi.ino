@@ -3,6 +3,7 @@
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
 #include "FS.h"
+#include <string>
 
 String config[5] = "";
 bool isServer = false;
@@ -14,7 +15,7 @@ String __ap_default_ssid = "esp8266-"+uuid;
 const char* ap_default_ssid = (const char *)__ap_default_ssid.c_str();
 const char* ap_default_psk = ap_default_ssid;
 /* if module is output module (0) or input module (1) */
-int type = 0;
+String type = "0";
 /* Description of the module */
 String label = "Test Module";
 String ipHub;
@@ -23,38 +24,45 @@ ESP8266WebServer server(80);
 
 /*Open file config*/
 bool readConfig(){
+  Serial.println("Read config");
+  String __ssid;
+  String __password;
   File f = SPIFFS.open("/config.txt", "r");
   if (!f) {
       Serial.println("file open failed");
+      f.close();
       return false;
   }else{
-    String content = f.readString();
-    f.close();
-    content.trim();
-    
-    int8_t pos = content.indexOf("\r\n");
-    uint8_t le = 2;
-    if (pos == -1)
-    {
-      le = 1;
-      pos = content.indexOf("\n");
-      if (pos == -1)
-      {
-        pos = content.indexOf("\r");
+    for(int i = 0; i < 5; i++){
+      String line = f.readStringUntil('\n');
+      if(i == 0){
+        __ssid = line;
+      }
+      if(i == 1){
+        __password = line;
+      }
+      if(i == 2){
+        uuid = line;
+      }
+      if(i == 3){
+        type = line;
+      }
+      if(i == 4){
+        label = line;
       }
     }
+
+    /* Convert String to char array because wifi.begin() method accept only char array */
   
-    // If there is no second line: Some information is missing.
-    if (pos == -1)
-    {
-      Serial.println("Infvalid content.");
-      Serial.println(content);
-      return false;
-    }
-    Serial.println("Ok config");
-    String test = content.substring(0, pos);
-    Serial.println(test);
-    return false;
+    __ssid.toCharArray(ssid, __ssid.length()+1);
+    __password.toCharArray(password, __password.length()+1);
+    Serial.print("-");
+    Serial.print(ssid);
+    Serial.print("-");
+    Serial.print(password);
+    Serial.print("-");
+    f.close();
+    return true;
   }
 }
 
@@ -73,8 +81,13 @@ void setWifiAccesPoint(){
 void setServer(){
   isServer = true;
   server.on("/configwifi", HTTP_POST, handleConfig);
+  server.on("/salut", HTTP_GET, handleSalut);
   server.begin();
   Serial.println("HTTP server started");
+}
+
+void handleSalut(){
+  server.send(200, "text/plain", "SALUT");
 }
 
 /* Handling POST request on /configwifi */
@@ -106,8 +119,8 @@ void handleConfig(){
 /*Connect module to hub with the data stored before*/
 void setWifiClient(){
   Serial.println("Set client");
-  WiFi.disconnect();
   delay(100);
+  WiFi.disconnect();
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
   
@@ -125,7 +138,6 @@ void setWifiClient(){
 
 void saveConfig(){
   File f = SPIFFS.open("/config.txt", "w");
-  Serial.println(f);
   if (!f) {
       Serial.println("file open failed");
   }else{
@@ -136,10 +148,6 @@ void saveConfig(){
     f.println(type);
     f.println(label);
     Serial.println("config");
-    for(int i = 0; i < 5; i++){
-      String s=f.readStringUntil('\n');
-      Serial.println(s);
-    }
   }
   f.close();
 }
@@ -161,4 +169,7 @@ void loop() {
   if(isServer){
     server.handleClient();    
   }
+  Serial.println(ssid);
+  Serial.println(password);
+  Serial.println("------");
 }
