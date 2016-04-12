@@ -1,3 +1,5 @@
+#include <Arduino.h>
+
 /**
  * @file OTA-mDNS-SPIFFS.ino
  * 
@@ -37,8 +39,46 @@ const char* ap_default_ssid = (const char *)__ap_default_ssid.c_str();
 const char* ap_default_psk = ap_default_ssid;
 /// @}
 
+/**
+ * Telnet
+ */
+const uint16_t aport = 23;
+WiFiServer TelnetServer(aport);
+WiFiClient Telnet;
+
 /// Uncomment the next line for verbose output over UART.
-#define SERIAL_VERBOSE
+//#define SERIAL_VERBOSE
+
+/**
+ * Telnet debug ln function
+ */
+void printDebugln(const char* c = ""){
+//Prints to telnet if connected
+  Serial.println(c);
+  
+  if (!Telnet) {  // otherwise it works only once
+    Telnet = TelnetServer.available();
+  }
+  if (Telnet && Telnet.connected()){
+    Telnet.println(c);
+  }
+}
+
+/**
+ * Telnet debug ln function
+ */
+void printDebug(const char* c = ""){
+//Prints to telnet if connected
+  Serial.print(c);
+
+  if (!Telnet) {  // otherwise it works only once
+    Telnet = TelnetServer.available();
+  }
+  if (Telnet.connected()){
+    Telnet.print(c);
+  }
+}
+
 
 /**
  * @brief Read WiFi connection information from file system.
@@ -56,7 +96,7 @@ bool loadConfig(String *ssid, String *pass)
   File configFile = SPIFFS.open("/cl_conf.txt", "r");
   if (!configFile)
   {
-    Serial.println("Failed to open cl_conf.txt.");
+    printDebugln("Failed to open cl_conf.txt.");
 
     return false;
   }
@@ -84,8 +124,8 @@ bool loadConfig(String *ssid, String *pass)
   // If there is no second line: Some information is missing.
   if (pos == -1)
   {
-    Serial.println("Infvalid content.");
-    Serial.println(content);
+    printDebugln("Infvalid content.");
+    printDebugln(content.c_str());
 
     return false;
   }
@@ -98,11 +138,11 @@ bool loadConfig(String *ssid, String *pass)
   pass->trim();
 
 #ifdef SERIAL_VERBOSE
-  Serial.println("----- file content -----");
-  Serial.println(content);
-  Serial.println("----- file content -----");
-  Serial.println("ssid: " + *ssid);
-  Serial.println("psk:  " + *pass);
+  printDebugln("----- file content -----");
+  printDebugln(content);
+  printDebugln("----- file content -----");
+  printDebugln("ssid: " + *ssid);
+  printDebugln("psk:  " + *pass);
 #endif
 
   return true;
@@ -121,7 +161,7 @@ bool saveConfig(String *ssid, String *pass)
   File configFile = SPIFFS.open("/cl_conf.txt", "w");
   if (!configFile)
   {
-    Serial.println("Failed to open cl_conf.txt for writing");
+    printDebugln("Failed to open cl_conf.txt for writing");
 
     return false;
   }
@@ -141,16 +181,21 @@ bool saveConfig(String *ssid, String *pass)
  */
 void setup()
 {
-  String station_ssid = "";
-  String station_psk = "";
+  String station_ssid = "LPDW-IOT";
+  String station_psk = "LPDWIOTROUTER2015";
 
   Serial.begin(115200);
+  TelnetServer.begin();
+  TelnetServer.setNoDelay(true);
   
   delay(100);
 
-  Serial.println("\r\n");
-  Serial.print("Chip ID: 0x");
-  Serial.println(ESP.getChipId(), HEX);
+  printDebugln("\r\n");
+  printDebug("Chip ID: 0x");
+  String __chipid_debug = String(ESP.getChipId(), HEX);
+  char chipid_debug[] = ""; 
+  __chipid_debug.toCharArray(chipid_debug, __chipid_debug.length()+1);
+  printDebugln(chipid_debug);
 
   // Set Hostname.
   String hostname(HOSTNAME);
@@ -158,14 +203,15 @@ void setup()
   WiFi.hostname(hostname);
 
   // Print hostname.
-  Serial.println("Hostname: " + hostname);
-  //Serial.println(WiFi.hostname());
+  printDebug("Hostname: ");
+  printDebugln(hostname.c_str());
+  //printDebugln(WiFi.hostname());
 
 
   // Initialize file system.
   if (!SPIFFS.begin())
   {
-    Serial.println("Failed to mount file system");
+    printDebugln("Failed to mount file system");
     return;
   }
 
@@ -175,7 +221,7 @@ void setup()
     station_ssid = "";
     station_psk = "";
 
-    Serial.println("No WiFi connection information available.");
+    printDebugln("No WiFi connection information available.");
   }
 
   // Check WiFi connection
@@ -189,14 +235,14 @@ void setup()
   // ... Compare file config with sdk config.
   if (WiFi.SSID() != station_ssid || WiFi.psk() != station_psk)
   {
-    Serial.println("WiFi config changed.");
+    printDebugln("WiFi config changed.");
 
     // ... Try to connect to WiFi station.
     WiFi.begin(station_ssid.c_str(), station_psk.c_str());
 
     // ... Pritn new SSID
-    Serial.print("new SSID: ");
-    Serial.println(WiFi.SSID());
+    printDebug("new SSID: ");
+    printDebugln(WiFi.SSID().c_str());
 
     // ... Uncomment this for debugging output.
     //WiFi.printDiag(Serial);
@@ -207,28 +253,29 @@ void setup()
     WiFi.begin();
   }
 
-  Serial.println("Wait for WiFi connection.");
+  printDebugln("Wait for WiFi connection.");
 
   // ... Give ESP 10 seconds to connect to station.
   unsigned long startTime = millis();
   while (WiFi.status() != WL_CONNECTED && millis() - startTime < 10000)
   {
     Serial.write('.');
-    //Serial.print(WiFi.status());
+    //printDebug(WiFi.status());
     delay(500);
   }
-  Serial.println();
+  printDebugln();
 
   // Check connection
   if(WiFi.status() == WL_CONNECTED)
   {
     // ... print IP Address
-    Serial.print("IP address: ");
-    Serial.println(WiFi.localIP());
+    printDebug("IP address: ");
+    String localip = WiFi.localIP().toString();
+    printDebugln(localip.c_str());
   }
   else
   {
-    Serial.println("Can not connect to WiFi station. Go into AP mode.");
+    printDebugln("Can not connect to WiFi station. Go into AP mode.");
     
     // Go into software AP mode.
     WiFi.mode(WIFI_AP);
@@ -237,14 +284,14 @@ void setup()
 
     WiFi.softAP(ap_default_ssid, ap_default_psk);//ap_default_ssid = ap_default_psk
 
-    Serial.print("IP address: ");
-    Serial.println(WiFi.softAPIP());
+    printDebug("IP address: ");
+    String apip = WiFi.softAPIP().toString();
+    printDebugln(apip.c_str());
   }
 
   // Start OTA server.
-  //setHostname(ap_default_ssid);//default const char* hostname
-  //setPassword(ap_default_ssid);//default const char* password
   ArduinoOTA.setHostname((const char *)hostname.c_str());
+  ArduinoOTA.setPassword("0123456789");
   ArduinoOTA.begin();
 }
 
@@ -257,5 +304,7 @@ void loop()
   // Handle OTA server.
   ArduinoOTA.handle();
   yield();
+  printDebugln("Test telnet");
+  delay(2000);
 }
 
