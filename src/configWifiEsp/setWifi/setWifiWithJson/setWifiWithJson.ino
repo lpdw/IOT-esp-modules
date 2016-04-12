@@ -8,9 +8,16 @@
 const char* ssid;
 const char* password;
 String uuid = String(ESP.getChipId(), HEX);
-String __ap_default_ssid = "esp8266-"+uuid;
+String __ap_default_ssid = "tchou-tchou-module-"+uuid;
 const char* ap_default_ssid = (const char *)__ap_default_ssid.c_str();
 const char* ap_default_psk = ap_default_ssid;
+
+/* if module is output module (0) or input module (1) */
+String type = "0";
+/* Description of the module */
+String label = "Test Module";
+String ipHub;
+
 
 ESP8266WebServer server(80);
 
@@ -72,38 +79,41 @@ void setWifiAccesPoint(){
 /* Configuring http server and listen for POST request on /configwifi */
 void setServer(){
   server.on("/configwifi", HTTP_POST, handleConfig);
-  server.on("/salut", HTTP_GET, handleSalut);
   server.begin();
   Serial.println("HTTP server started");
-}
-
-void handleSalut(){
-  server.send(200, "text/plain", "SALUT");
 }
 
 /* Handling POST request on /configwifi */
 void handleConfig(){
   int args = server.args();
   String requestData;
-  /*If request params are not SSID or PASSWORD return HTTP error 400 */
-  if(server.argName(0) != "ssid" || server.argName(1) != "password" ){
-    server.send(400, "text/plain", "Arguments must be \"ssid\" or \"password\"");
+  /*If request params are not SSID or PASSWORD or IP return HTTP error 400 */
+  if(server.argName(0) != "ssid" || server.argName(1) != "password" || server.argName(2) != "ip"){
+    server.send(400, "text/plain", "Arguments must be \"ssid\", \"password\" and \"ip\"");
   }else{
     /* if everything is OK, send response 200 with the data pass with the request*/
     for (uint8_t i = 0; i < server.args(); i++) {
       String param = server.argName(i);
       requestData += " " + param + ": " + server.arg(i) + "\n";
     }
-    server.send(200, "text/plain", requestData);
-    Serial.println(requestData);
-    /* Store request params with  temporary varaibles*/
-    String __ssid = server.arg(0);
-    String __password = server.arg(1);
-    /* Convert String to char array because wifi.begin() method accept only char array */
-    ssid = (const char *)__ssid.c_str();
-    password = (const char *)__password.c_str();
-    saveConfig();
-    setWifiClient();
+    /*If ssid or password are too short return error http 400*/
+    if(server.arg(0).length() < 6 || server.arg(1).length() < 6 ){
+      server.send(400, "text/plain", "ssid or password send are too short");
+    }else{
+      server.send(202, "text/plain", requestData);
+      Serial.println(requestData);
+      /* Store request params with  temporary varaibles*/
+      String __ssid = server.arg(0);
+      String __password = server.arg(1);
+      //Store hub ip
+      ip = server.arg(2);
+      /* Convert String to char array because wifi.begin() method accept only char array */
+      ssid = (const char *)__ssid.c_str();
+      password = (const char *)__password.c_str();
+      saveConfig();
+      setWifiClient();
+      register();
+    }
   }
 }
 
@@ -130,6 +140,10 @@ bool saveConfig(){
   JsonObject& json = jsonBuffer.createObject();
   json["ssid"] = ssid;
   json["password"] = password;
+  json["uuid"] = uuid;
+  json["type"] = type;
+  json["label"] = label;
+  json["iphub"] = iphub;
 
   File configFile = SPIFFS.open("/config.json", "w");
   if (!configFile) {
@@ -138,6 +152,7 @@ bool saveConfig(){
   }
 
   json.printTo(configFile);
+  Serial.println("Config Done");
   return true;
 }
 
@@ -155,5 +170,5 @@ void setup() {
 }
 
 void loop() {
-  server.handleClient();    
+  server.handleClient();  
 }
