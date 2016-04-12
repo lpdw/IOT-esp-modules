@@ -62,7 +62,7 @@ bool readConfig(){
   Serial.println(password);
 
   configFile.close();
-  return true;
+  return false;
 }
 
 /*Configuring Acces point with unique SSID*/
@@ -106,13 +106,12 @@ void handleConfig(){
       String __ssid = server.arg(0);
       String __password = server.arg(1);
       //Store hub ip
-      ip = server.arg(2);
+      ipHub = server.arg(2);
       /* Convert String to char array because wifi.begin() method accept only char array */
       ssid = (const char *)__ssid.c_str();
       password = (const char *)__password.c_str();
       saveConfig();
       setWifiClient();
-      register();
     }
   }
 }
@@ -143,7 +142,7 @@ bool saveConfig(){
   json["uuid"] = uuid;
   json["type"] = type;
   json["label"] = label;
-  json["iphub"] = iphub;
+  json["iphub"] = ipHub;
 
   File configFile = SPIFFS.open("/config.json", "w");
   if (!configFile) {
