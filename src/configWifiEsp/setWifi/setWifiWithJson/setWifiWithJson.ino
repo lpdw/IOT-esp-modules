@@ -1,6 +1,7 @@
 #include <WiFiClient.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
+#include <ESP8266HTTPClient.h>
 #include <ESP8266mDNS.h>
 #include <ArduinoJson.h>
 #include "FS.h"
@@ -62,7 +63,7 @@ bool readConfig(){
   Serial.println(password);
 
   configFile.close();
-  return false;
+  return true;
 }
 
 /*Configuring Acces point with unique SSID*/
@@ -110,8 +111,6 @@ void handleConfig(){
       /* Convert String to char array because wifi.begin() method accept only char array */
       ssid = (const char *)__ssid.c_str();
       password = (const char *)__password.c_str();
-      saveConfig();
-      setWifiClient();
     }
   }
 }
@@ -155,6 +154,44 @@ bool saveConfig(){
   return true;
 }
 
+void registerHub(){
+  HTTPClient http;
+  Serial.print("[HTTP] begin...\n");
+  // configure traged server and url
+  http.begin("http://"+ipHub+":3000/api/register"); //HTTP
+  Serial.print("[HTTP] POST...\n");
+  // start connection and send HTTP header
+  http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+  http.POST("uuid="+uuid+"&type="+type+"&label="+label);
+  http.writeToStream(&Serial);
+  http.end();
+}
+
+void registerActions(){
+  String actions[5][4] = {
+    {uuid,"GET","/power","power information"},
+    {uuid,"GET","/power/","power strength information"},
+    {uuid,"POST","/power/strength","set power strength"},
+    {uuid,"GET","/power/inverse","power direction"},
+    {uuid,"POST","/power/inverse","set power direction"},
+  };
+
+  int nbrActions = sizeof(actions)/sizeof(actions[0]);
+
+  HTTPClient http;
+  // configure traged server and url
+  for(int i = 0; i < nbrActions; i++){
+    Serial.print("[HTTP] begin...\n");
+    http.begin("http://"+ipHub+":3000/api/action"); //HTTP
+    Serial.print("[HTTP] POST...\n");
+    // start connection and send HTTP header
+    http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+    http.POST("uuid="+actions[i][0]+"&endpoint="+actions[i][2]+"&type_http="+actions[i][1]+"&description="+actions[i][3]);
+    http.writeToStream(&Serial);
+    http.end();
+  }
+}
+
 void setup() {
   delay(1000);
   Serial.begin(115200);
@@ -165,6 +202,10 @@ void setup() {
   }else{
     setWifiAccesPoint();
     setServer();
+    saveConfig();
+    setWifiClient();
+    registerHub();
+    registerActions();
   }
 }
 
