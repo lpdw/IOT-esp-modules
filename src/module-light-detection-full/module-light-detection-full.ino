@@ -14,7 +14,7 @@ String __ap_default_ssid = "tchou-tchou-module-"+uuid;
 const char* ap_default_ssid = (const char *)__ap_default_ssid.c_str();
 const char* ap_default_psk = ap_default_ssid;
 
-/* if module is output module (0) or input module (1) */
+/* if module is output module (0) or input module (1) or transfo module (2)*/
 String type = "0";
 /* Description of the module */
 String label = "Module capteur passage train";
@@ -73,7 +73,7 @@ bool readConfig(){
   Serial.println(password);
 
   configFile.close();
-  return true;
+  return false;
 }
 
 /*Configuring Acces point with unique SSID*/
@@ -112,6 +112,9 @@ void handleConfig(){
     if(server.arg(0).length() < 6 || server.arg(1).length() < 6 ){
       server.send(400, "text/plain", "ssid or password send are too short");
     }else{
+      if(server.arg(0) == "LPDW-IOT"){
+        Serial.println("Ca marche chez moi");
+      }
       server.send(202, "text/plain", requestData);
       Serial.println(requestData);
       /* Store request params with  temporary varaibles*/
@@ -205,7 +208,7 @@ double averageArray(int arrayValue[], int sizeArray){
 
 void reinitFlag (){
     flag = false;
-    delay(3000);
+    delay(2000);
     flag = true;
 }
 
@@ -218,10 +221,13 @@ void postData(String id, String value){
   Serial.print("[HTTP] POST...\n");
   // start connection and send HTTP header
   http.addHeader("Content-Type", "application/x-www-form-urlencoded");
-  http.POST("uuid="+id+"&value="+value);
+  http.POST("uuid="+id+"&value="+value+"");
   http.writeToStream(&Serial);
   http.end();
-  reinitFlag();
+}
+
+void handleTest(){
+  Serial.println("GET TEST");
 }
 
 void setup() {
@@ -237,6 +243,8 @@ void setup() {
     setWifiAccesPoint();
     setServer();
   }
+
+  server.on("/testget", HTTP_GET, handleTest);
 }
 
 void loop() {
@@ -254,7 +262,9 @@ void loop() {
         if(averageBrightness <1000 && averageBrightness > 900 && flag == true){
           dataSend = "1";
           digitalWrite(ledPin, HIGH);
+          Serial.println("DATASEND: "+ dataSend);
           postData(uuid, dataSend);
+          reinitFlag();
         }
         reinitArray(crossingTrain, 5);
         itrArray = 0;
@@ -263,8 +273,8 @@ void loop() {
     else{
       dataSend = "0";
       digitalWrite(ledPin, LOW);
-      postData(uuid, dataSend);
+      //postData(uuid, dataSend);
+      Serial.println("Ne passe pas");
     }
    }
-  delay(5);
 }
