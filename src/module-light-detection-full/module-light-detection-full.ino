@@ -185,32 +185,6 @@ void registerHub(){
   http.end();
 }
 
-/*A oter si module = capteur*/
-void registerActions(){
-  String actions[5][4] = {
-    {uuid,"GET","/power","power information"},
-    {uuid,"GET","/power/","power strength information"},
-    {uuid,"POST","/power/strength","set power strength"},
-    {uuid,"GET","/power/inverse","power direction"},
-    {uuid,"POST","/power/inverse","set power direction"},
-  };
-
-  int nbrActions = sizeof(actions)/sizeof(actions[0]);
-
-  HTTPClient http;
-  // configure traged server and url
-  for(int i = 0; i < nbrActions; i++){
-    Serial.print("[HTTP] begin...\n");
-    http.begin("http://"+ipHub+":3000/api/action"); //HTTP
-    Serial.print("[HTTP] POST...\n");
-    // start connection and send HTTP header
-    http.addHeader("Content-Type", "application/x-www-form-urlencoded");
-    http.POST("uuid="+actions[i][0]+"&endpoint="+actions[i][2]+"&type_http="+actions[i][1]+"&description="+actions[i][3]);
-    http.writeToStream(&Serial);
-    http.end();
-  }
-}
-
 /*ligth sensor*/
 void reinitArray(int arrayToClean[], int size){
   for(int p = 0; p <= size; p++)
