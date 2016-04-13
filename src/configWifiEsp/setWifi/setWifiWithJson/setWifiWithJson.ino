@@ -19,7 +19,6 @@ String type = "0";
 String label = "Test Module";
 String ipHub;
 
-
 ESP8266WebServer server(80);
 
 /*Open file config*/
@@ -111,6 +110,10 @@ void handleConfig(){
       /* Convert String to char array because wifi.begin() method accept only char array */
       ssid = (const char *)__ssid.c_str();
       password = (const char *)__password.c_str();
+      saveConfig();
+      setWifiClient();
+      registerHub();
+      registerActions();
     }
   }
 }
@@ -199,16 +202,13 @@ void setup() {
   SPIFFS.begin();
   if(readConfig()){
     setWifiClient();
+    setServer();
   }else{
     setWifiAccesPoint();
     setServer();
-    saveConfig();
-    setWifiClient();
-    registerHub();
-    registerActions();
   }
 }
 
 void loop() {
-  server.handleClient();  
+  server.handleClient();
 }
