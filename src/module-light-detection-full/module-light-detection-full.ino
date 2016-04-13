@@ -17,7 +17,7 @@ const char* ap_default_psk = ap_default_ssid;
 /* if module is output module (0) or input module (1) */
 String type = "0";
 /* Description of the module */
-String label = "Test Module";
+String label = "Module capteur passage train";
 String ipHub;
 
 int sensorPin = A0;    // select the input pin for the potentiometer
@@ -125,9 +125,6 @@ void handleConfig(){
       saveConfig();
       setWifiClient();
       registerHub();
-      if(type == "1"){
-       registerActions(); 
-      }
     }
   }
 }
