@@ -17,6 +17,8 @@ String __ap_default_ssid = "tchou-tchou-module-"+uuid;
 const char* ap_default_ssid = (const char *)__ap_default_ssid.c_str();
 const char* ap_default_psk = ap_default_ssid;
 
+bool first_read = true;
+
 /* if module is output module (0) or input module (1) */
 String type = "2";
 /* Description of the module */
@@ -222,40 +224,47 @@ void handlePowerStrength() {
 
   if (server.method() == HTTP_GET)
   {
-    ArduinoSerial.write("/s");
-    Serial.println("/s");
-    String value;
-    while(ArduinoSerial.available() > 0) {
+    
+    ArduinoSerial.print("/s");
+//    Serial.println("/s");
 
-      Serial.println(ArduinoSerial.read());
+//    if (ArduinoSerial.available() > 0) {
+//      char msg = ArduinoSerial.read();
+//      Serial.println(msg);
+//    }
+
+    int response = 0;
+    if((ArduinoSerial.available() > 0) && (response == 0)) {
+      String value = "";
       value = ArduinoSerial.read();
+        Serial.println("Valeur: "+value);
 
-      if(ArduinoSerial.available() > -1) {
-        server.send(200, "text/plain", "the strength is about "+value);
-      }
+      
+        server.send(200, "text/plain", value);
+        response=1;
 
     }
 
   } else if((server.method() == HTTP_POST) || (server.method() == 6)){
-    String value;
+    String value_set;
     for (uint8_t i = 0; i < server.args(); i++) {
       if(server.argName(i) == "strength"){
-        value = server.arg(i);
+        value_set = server.arg(i);
       }
     }
 
-    if(0 <= value.toInt() <= 100)
+    if(value_set.toInt() >= 0  && value_set.toInt() <= 100)
     {
-      Serial.println("/s/"+value);
-      ArduinoSerial.print("/s/"+value);
+      Serial.println("/s/"+value_set);
+      ArduinoSerial.print("/s/"+value_set);
 
-      server.send(202, "text/plain", "Congrats you are on /power/strength");
+      server.send(202, "text/plain", value_set);
     } else {
       Serial.print("fail - state");
       Serial.println();
       server.send(400, "text/plain", "Error, check your requests.");
     }
-
+  
 
   }
 
@@ -316,4 +325,21 @@ void setup(void){
 
 void loop(void){
   server.handleClient();
+  if(first_read)
+  {
+    ArduinoSerial.print("/s");
+    if(ArduinoSerial.available() > 0) {
+      String value;
+      value = ArduinoSerial.read();
+      Serial.println("loop: "+value);
+    }
+    first_read = false;
+  }
+
+  
+//  String msg;
+//  if (ArduinoSerial.available() > 0) {
+//       msg = ArduinoSerial.read();
+//      Serial.println("loop "+msg);
+//   }
 }
