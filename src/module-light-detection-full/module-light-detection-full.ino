@@ -29,7 +29,6 @@ int itrArray = 0;
 bool flag = true;
 double averageBrightness = 0.0;
 String dataSend;
-
 ESP8266WebServer server(80);
 
 /*Open file config*/
@@ -73,7 +72,7 @@ bool readConfig(){
   Serial.println(password);
 
   configFile.close();
-  return false;
+  return true;
 }
 
 /*Configuring Acces point with unique SSID*/
@@ -91,6 +90,7 @@ void setWifiAccesPoint(){
 /* Configuring http server and listen for POST request on /configwifi */
 void setServer(){
   server.on("/configwifi", HTTP_POST, handleConfig);
+  server.on("/status", HTTP_GET, handleStatus);
   server.begin();
   Serial.println("HTTP server started");
 }
@@ -132,11 +132,16 @@ void handleConfig(){
   }
 }
 
+void handleStatus(){
+  sensorValue = analogRead(sensorPin);
+  Serial.println(sensorValue);
+  server.send(200, "text/plain", "ok");
+}
+
 /*Connect module to hub with the data stored before*/
 void setWifiClient(){
   Serial.println("Set client");
   delay(100);
-  WiFi.disconnect();
   WiFi.mode(WIFI_STA); 
   WiFi.begin(ssid, password);
   // Wait for connection
@@ -226,10 +231,6 @@ void postData(String id, String value){
   http.end();
 }
 
-void handleTest(){
-  Serial.println("GET TEST");
-}
-
 void setup() {
   delay(1000);
   Serial.begin(115200);
@@ -243,8 +244,6 @@ void setup() {
     setWifiAccesPoint();
     setServer();
   }
-
-  server.on("/testget", HTTP_GET, handleTest);
 }
 
 void loop() {
@@ -269,12 +268,9 @@ void loop() {
         reinitArray(crossingTrain, 5);
         itrArray = 0;
       }
-    } 
-    else{
-      dataSend = "0";
+    }else{
       digitalWrite(ledPin, LOW);
-      //postData(uuid, dataSend);
-      Serial.println("Ne passe pas");
+      //Serial.println("Ne passe pas");
     }
    }
 }
