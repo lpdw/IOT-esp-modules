@@ -249,7 +249,7 @@ void closeGate(){
     if(currentMillis - previousMillis >= interval) {
       previousMillis = currentMillis;   
       if (ledState == LOW) {
-        tone(15, NOTE_C6, 500);
+        tone(15, NOTE_C5, 500);
         ledState = HIGH;
       } else {
         ledState = LOW;
@@ -266,11 +266,11 @@ void closeGate(){
 
 void ringGate(int interval){
   int time;
-  for (time = 0; time <= 3; time += 1) {
+  for (time = 0; time <= 2; time += 1) {
     tone(15, 1, 500);
     digitalWrite(LED_BUILTIN, LOW);
     delay(500);
-    tone(15, NOTE_C6, 500);
+    tone(15, NOTE_C5, 500);
     digitalWrite(LED_BUILTIN, HIGH);
     delay(500);
   }
