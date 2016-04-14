@@ -6,6 +6,7 @@
 #include <ArduinoJson.h>
 #include "FS.h"
 #include <Servo.h>
+#include "pitches.h"
 
 const char* ssid;
 const char* password;
@@ -23,6 +24,14 @@ String ipHub;
 /* Button flash for apmode */
 const int buttonPin = 0;
 int buttonState = 0; 
+
+/* Beeper */
+// beeperPin
+int beeperPin = 15;
+
+int ledState = LOW; 
+unsigned long previousMillis = 0;
+const long interval = 500;
 
 ESP8266WebServer server(80);
 
@@ -145,6 +154,7 @@ void setWifiClient(){
     buttonState = digitalRead(buttonPin);
     // If flash buttion pressed, goto AP mode
     if (buttonState == LOW) {
+      digitalWrite(LED_BUILTIN, HIGH);
       setWifiAccesPoint();
       break;
     }
@@ -224,7 +234,7 @@ void openGate(){
   server.send(202, "text/plain", "OK : Gate opening...");
   for(pos = 100; pos >= 0; pos -= 1)     // goes from 90 degrees to 0 degrees 
   {                                
-    gateservo.write(pos);              // tell servo to go to position in variable 'pos' 
+    gateservo.write(pos);              // tell servo to go to position in variable 'pos'
     delay(15);                       // waits 15ms for the servo to reach the position 
   }
 }
@@ -235,11 +245,36 @@ void closeGate(){
   for(pos = 0; pos <= 100; pos += 1) // goes from 0 degrees to 90 degrees 
   {                                  // in steps of 1 degree 
     gateservo.write(pos);              // tell servo to go to position in variable 'pos' 
-    delay(15);                       // waits 15ms for the servo to reach the position 
+    unsigned long currentMillis = millis();
+    if(currentMillis - previousMillis >= interval) {
+      previousMillis = currentMillis;   
+      if (ledState == LOW) {
+        tone(15, NOTE_C6, 500);
+        ledState = HIGH;
+      } else {
+        ledState = LOW;
+      }
+      digitalWrite(LED_BUILTIN, ledState);
+    }
+    delay(15);                        // waits 15ms for the servo to reach the position 
   }
+  digitalWrite(LED_BUILTIN, LOW);
   //delay before opening gate again
-  delay(2000);
+  ringGate(2000);
   openGate();
+}
+
+void ringGate(int interval){
+  int time;
+  for (time = 0; time <= 3; time += 1) {
+    tone(15, 1, 500);
+    digitalWrite(LED_BUILTIN, LOW);
+    delay(500);
+    tone(15, NOTE_C6, 500);
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(500);
+  }
+  digitalWrite(LED_BUILTIN, LOW);
 }
 
 void statusGate(){
@@ -273,5 +308,11 @@ void setup() {
 }
 
 void loop() {
+  buttonState = digitalRead(buttonPin);
+  // If flash buttion pressed, goto AP mode
+  if (buttonState == LOW) {
+    digitalWrite(LED_BUILTIN, HIGH);
+    setWifiAccesPoint();
+  }
   server.handleClient();
 }
