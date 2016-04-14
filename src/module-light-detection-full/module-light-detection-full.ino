@@ -29,6 +29,11 @@ int itrArray = 0;
 bool flag = true;
 double averageBrightness = 0.0;
 String dataSend;
+
+/* Button flash for apmode */
+const int buttonPin = 0;
+int buttonState = 0; 
+
 ESP8266WebServer server(80);
 
 /*Open file config*/
@@ -146,14 +151,24 @@ void setWifiClient(){
   WiFi.begin(ssid, password);
   // Wait for connection
   while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
+    digitalWrite(LED_BUILTIN, LOW);
+    delay(1000);
     Serial.print(".");
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(1000);
+    buttonState = digitalRead(buttonPin);
+    // If flash buttion pressed, goto AP mode
+    if (buttonState == LOW) {
+      setWifiAccesPoint();
+      break;
+    }
   }
   Serial.println("");
   Serial.print("Connected to ");
   Serial.println(ssid);
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
+  digitalWrite(LED_BUILTIN, LOW);
 }
 
 bool saveConfig(){
@@ -234,8 +249,9 @@ void postData(String id, String value){
 void setup() {
   delay(1000);
   Serial.begin(115200);
-  
+  pinMode(LED_BUILTIN, OUTPUT);
   pinMode(ledPin, OUTPUT);
+  pinMode(buttonPin, INPUT);
   SPIFFS.begin();
   if(readConfig()){
     setWifiClient();
@@ -247,6 +263,12 @@ void setup() {
 }
 
 void loop() {
+  buttonState = digitalRead(buttonPin);
+  // If flash buttion pressed, goto AP mode
+  if (buttonState == LOW) {
+    digitalWrite(LED_BUILTIN, HIGH);
+    setWifiAccesPoint();
+  }
   server.handleClient();
    if(WiFi.status() == WL_CONNECTED) {
     sensorValue = analogRead(sensorPin);
