@@ -133,14 +133,18 @@ void setWifiClient(){
   WiFi.begin(ssid, password);
   // Wait for connection
   while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
+    digitalWrite(LED_BUILTIN, LOW);
+    delay(1000);
     Serial.print(".");
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(1000);
   }
   Serial.println("");
   Serial.print("Connected to ");
   Serial.println(ssid);
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
+  digitalWrite(LED_BUILTIN, LOW);
 }
 
 bool saveConfig(){
@@ -242,6 +246,7 @@ void statusGate(){
 
 void setup() {
   delay(1000);
+  pinMode(LED_BUILTIN, OUTPUT);
   Serial.begin(115200);
   
   SPIFFS.begin();
