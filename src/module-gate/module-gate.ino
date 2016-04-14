@@ -20,6 +20,10 @@ String type = "1";
 String label = "Module barrière";
 String ipHub;
 
+/* Button flash for apmode */
+const int buttonPin = 0;
+int buttonState = 0; 
+
 ESP8266WebServer server(80);
 
 // create servo object to control a servo
@@ -85,7 +89,7 @@ void setServer(){
   server.on("/configwifi", HTTP_POST, handleConfig);
   server.on("/gate/open", HTTP_POST, openGate);
   server.on("/gate/close", HTTP_POST, closeGate);
-  server.on("/gate", HTTP_GET, statusGate);
+  server.on("/status", HTTP_GET, statusGate);
   server.begin();
   Serial.println("HTTP server started");
 }
@@ -138,6 +142,12 @@ void setWifiClient(){
     Serial.print(".");
     digitalWrite(LED_BUILTIN, HIGH);
     delay(1000);
+    buttonState = digitalRead(buttonPin);
+    // If flash buttion pressed, goto AP mode
+    if (buttonState == LOW) {
+      setWifiAccesPoint();
+      break;
+    }
   }
   Serial.println("");
   Serial.print("Connected to ");
@@ -182,9 +192,10 @@ void registerHub(){
 }
 
 void registerActions(){
-  String actions[2][4] = {
+  String actions[3][4] = {
     {uuid,"POST","/gate/open","Ouvrir la barrière (0 deg)"},
     {uuid,"POST","/gate/close","Fermer la barrière (180 deg)"},
+    {uuid,"GET","/status","Status de la barrière"},
   };
 
   int nbrActions = sizeof(actions)/sizeof(actions[0]);
@@ -247,6 +258,7 @@ void statusGate(){
 void setup() {
   delay(1000);
   pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(buttonPin, INPUT);
   Serial.begin(115200);
   
   SPIFFS.begin();
