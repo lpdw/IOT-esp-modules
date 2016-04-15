@@ -17,14 +17,18 @@ String __ap_default_ssid = "tchou-tchou-module-"+uuid;
 const char* ap_default_ssid = (const char *)__ap_default_ssid.c_str();
 const char* ap_default_psk = ap_default_ssid;
 
+String inverse = "false";
 bool first_read = true;
-
 /* if module is output module (0) or input module (1) */
 String type = "2";
 /* Description of the module */
 String label = "Transformateur Module";
 String ipHub;
 
+
+/* Button flash for apmode */
+const int buttonPin = 0;
+int buttonState = 0; 
 
 ESP8266WebServer server(80);
 
@@ -86,11 +90,11 @@ void setWifiAccesPoint(){
 
 /* Configuring http server and listen for POST request on /configwifi */
 void setServer(){
-  server.on("/power", handlePower);
+  server.on("/power",HTTP_GET, handlePower);
   server.on("/power/strength", handlePowerStrength);
   server.on("/power/inverse", handlePowerInverse);
-  server.on("/power/shutthefuck", HTTP_GET ,handlePowerShutTheFuckUp);
-  server.on("/configwifi", HTTP_POST, handleConfig);
+  server.on("/power/stop", HTTP_POST ,handlePowerShutTheFuckUp);
+  server.on("/configwifi", HTTP_POST , handleConfig);
 
   server.onNotFound(handleNotFound);
   server.begin();
@@ -141,14 +145,24 @@ void setWifiClient(){
   WiFi.begin(ssid, password);
   // Wait for connection
   while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
+    digitalWrite(LED_BUILTIN, LOW);
+    delay(1000);
     Serial.print(".");
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(1000);
+    buttonState = digitalRead(buttonPin);
+    // If flash buttion pressed, goto AP mode
+    if (buttonState == LOW) {
+      setWifiAccesPoint();
+      break;
+    }
   }
   Serial.println("");
   Serial.print("Connected to ");
   Serial.println(ssid);
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
+  digitalWrite(LED_BUILTIN, LOW);
 }
 
 bool saveConfig(){
@@ -188,12 +202,13 @@ void registerHub(){
 }
 
 void registerActions(){
-  String actions[5][4] = {
+  String actions[6][4] = {
     {uuid,"GET","/power","power information"},
     {uuid,"GET","/power/strength","power strength information"},
     {uuid,"POST","/power/strength","set power strength"},
     {uuid,"GET","/power/inverse","power direction"},
     {uuid,"POST","/power/inverse","set power direction"},
+    {uuid,"POST","/power/stop","Immediatly stop the train"}
   };
 
   int nbrActions = sizeof(actions)/sizeof(actions[0]);
@@ -214,9 +229,16 @@ void registerActions(){
 
 // /power
 void handlePower() {
-    Serial.println("/p");
-    server.send(200, "text/plain", "Congrats you are on /power");
+    ArduinoSerial.print("/s");
 
+    int response = 0;
+    if((ArduinoSerial.available() > 0) && (response == 0)) {
+      String value = "";
+      value = ArduinoSerial.read();
+      Serial.println("Valeur: "+value);
+      server.send(200, "text/plain", "{ 'Strength':"+value+", 'inverse':"+inverse+"}");
+      response=1;
+    }
 }
 
 // /power/strength
@@ -224,14 +246,8 @@ void handlePowerStrength() {
 
   if (server.method() == HTTP_GET)
   {
-    
-    ArduinoSerial.print("/s");
-//    Serial.println("/s");
 
-//    if (ArduinoSerial.available() > 0) {
-//      char msg = ArduinoSerial.read();
-//      Serial.println(msg);
-//    }
+    ArduinoSerial.print("/s");
 
     int response = 0;
     if((ArduinoSerial.available() > 0) && (response == 0)) {
@@ -239,7 +255,7 @@ void handlePowerStrength() {
       value = ArduinoSerial.read();
         Serial.println("Valeur: "+value);
 
-      
+
         server.send(200, "text/plain", value);
         response=1;
 
@@ -264,7 +280,7 @@ void handlePowerStrength() {
       Serial.println();
       server.send(400, "text/plain", "Error, check your requests.");
     }
-  
+
 
   }
 
@@ -274,22 +290,23 @@ void handlePowerStrength() {
 void handlePowerInverse() {
   if (server.method() == HTTP_GET)
   {
-    server.send(200, "text/plain", "Congrats you are on /power");
+    server.send(200, "text/plain", inverse);
   } else if((server.method() == HTTP_POST) || (server.method() == 6)){
-
+    (inverse == "false")?inverse="true":inverse="false";
     ArduinoSerial.write("/p/i");
     Serial.print("/p/i");
-    Serial.println();
-    server.send(202, "text/plain", "Your request has been sent. The power will be inversed soon.");
+    
+    server.send(202, "text/plain", inverse);
   }
 }
 
 // /power/shutthefuckup
 void handlePowerShutTheFuckUp() {
   ArduinoSerial.write("/p/s");
-  Serial.print("/p/s");
-  Serial.println();
-  server.send(200, "text/plain", "Congrats you are on /power/shutthefuckup");
+  Serial.println("/p/s");
+  server.send(202, "text/plain", "Stop");
+  delay(500);
+  ArduinoSerial.write("/s/0");
 }
 
 void handleNotFound(){
@@ -310,6 +327,8 @@ void handleNotFound(){
 void setup(void){
 
   delay(1000);
+  pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(buttonPin, INPUT);
   Serial.begin(115200);
   ArduinoSerial.begin(115200);
 
@@ -336,7 +355,22 @@ void loop(void){
     first_read = false;
   }
 
+
+  buttonState = digitalRead(buttonPin);
+  // If flash buttion pressed, goto AP mode
+  if (buttonState == LOW) {
+    digitalWrite(LED_BUILTIN, HIGH);
+    setWifiAccesPoint();
+  }
+
   
+  buttonState = digitalRead(buttonPin);
+  // If flash buttion pressed, goto AP mode
+  if (buttonState == LOW) {
+    digitalWrite(LED_BUILTIN, HIGH);
+    setWifiAccesPoint();
+  }
+
 //  String msg;
 //  if (ArduinoSerial.available() > 0) {
 //       msg = ArduinoSerial.read();

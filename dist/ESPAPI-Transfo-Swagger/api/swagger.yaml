@@ -52,7 +52,6 @@ paths:
       summary: "Power inverse' informations ."
       description: "Set the power inverse."
       operationId: "powerInversePOST"
-      parameters: []
       responses:
         202:
           description: "The current informations about the power."
