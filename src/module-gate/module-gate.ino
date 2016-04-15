@@ -6,6 +6,7 @@
 #include <ArduinoJson.h>
 #include "FS.h"
 #include <Servo.h>
+#include "pitches.h"
 
 const char* ssid;
 const char* password;
@@ -19,6 +20,18 @@ String type = "1";
 /* Description of the module */
 String label = "Module barrière";
 String ipHub;
+
+/* Button flash for apmode */
+const int buttonPin = 0;
+int buttonState = 0; 
+
+/* Beeper */
+// beeperPin
+int beeperPin = 15;
+
+int ledState = LOW; 
+unsigned long previousMillis = 0;
+const long interval = 500;
 
 ESP8266WebServer server(80);
 
@@ -85,7 +98,7 @@ void setServer(){
   server.on("/configwifi", HTTP_POST, handleConfig);
   server.on("/gate/open", HTTP_POST, openGate);
   server.on("/gate/close", HTTP_POST, closeGate);
-  server.on("/gate", HTTP_GET, statusGate);
+  server.on("/status", HTTP_GET, statusGate);
   server.begin();
   Serial.println("HTTP server started");
 }
@@ -133,14 +146,25 @@ void setWifiClient(){
   WiFi.begin(ssid, password);
   // Wait for connection
   while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
+    digitalWrite(LED_BUILTIN, LOW);
+    delay(1000);
     Serial.print(".");
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(1000);
+    buttonState = digitalRead(buttonPin);
+    // If flash buttion pressed, goto AP mode
+    if (buttonState == LOW) {
+      digitalWrite(LED_BUILTIN, HIGH);
+      setWifiAccesPoint();
+      break;
+    }
   }
   Serial.println("");
   Serial.print("Connected to ");
   Serial.println(ssid);
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
+  digitalWrite(LED_BUILTIN, LOW);
 }
 
 bool saveConfig(){
@@ -178,9 +202,10 @@ void registerHub(){
 }
 
 void registerActions(){
-  String actions[2][4] = {
+  String actions[3][4] = {
     {uuid,"POST","/gate/open","Ouvrir la barrière (0 deg)"},
     {uuid,"POST","/gate/close","Fermer la barrière (180 deg)"},
+    {uuid,"GET","/status","Status de la barrière"},
   };
 
   int nbrActions = sizeof(actions)/sizeof(actions[0]);
@@ -209,7 +234,7 @@ void openGate(){
   server.send(202, "text/plain", "OK : Gate opening...");
   for(pos = 100; pos >= 0; pos -= 1)     // goes from 90 degrees to 0 degrees 
   {                                
-    gateservo.write(pos);              // tell servo to go to position in variable 'pos' 
+    gateservo.write(pos);              // tell servo to go to position in variable 'pos'
     delay(15);                       // waits 15ms for the servo to reach the position 
   }
 }
@@ -220,11 +245,36 @@ void closeGate(){
   for(pos = 0; pos <= 100; pos += 1) // goes from 0 degrees to 90 degrees 
   {                                  // in steps of 1 degree 
     gateservo.write(pos);              // tell servo to go to position in variable 'pos' 
-    delay(15);                       // waits 15ms for the servo to reach the position 
+    unsigned long currentMillis = millis();
+    if(currentMillis - previousMillis >= interval) {
+      previousMillis = currentMillis;   
+      if (ledState == LOW) {
+        tone(15, NOTE_C5, 500);
+        ledState = HIGH;
+      } else {
+        ledState = LOW;
+      }
+      digitalWrite(LED_BUILTIN, ledState);
+    }
+    delay(15);                        // waits 15ms for the servo to reach the position 
   }
+  digitalWrite(LED_BUILTIN, LOW);
   //delay before opening gate again
-  delay(2000);
+  ringGate(2000);
   openGate();
+}
+
+void ringGate(int interval){
+  int time;
+  for (time = 0; time <= 2; time += 1) {
+    tone(15, 1, 500);
+    digitalWrite(LED_BUILTIN, LOW);
+    delay(500);
+    tone(15, NOTE_C5, 500);
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(500);
+  }
+  digitalWrite(LED_BUILTIN, LOW);
 }
 
 void statusGate(){
@@ -242,6 +292,8 @@ void statusGate(){
 
 void setup() {
   delay(1000);
+  pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(buttonPin, INPUT);
   Serial.begin(115200);
   
   SPIFFS.begin();
@@ -256,5 +308,11 @@ void setup() {
 }
 
 void loop() {
+  buttonState = digitalRead(buttonPin);
+  // If flash buttion pressed, goto AP mode
+  if (buttonState == LOW) {
+    digitalWrite(LED_BUILTIN, HIGH);
+    setWifiAccesPoint();
+  }
   server.handleClient();
 }
