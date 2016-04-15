@@ -1,0 +1,124 @@
+---
+swagger: "2.0"
+info:
+  description: "Choo Choo Train Fruit Fruit API"
+  version: "1.0.0"
+  title: "Choo Choo Train API"
+host: "192.168.1.239"
+schemes:
+- "http"
+produces:
+- "text/plain"
+paths:
+  /power:
+    get:
+      tags:
+      - "Power"
+      summary: "Power's informations."
+      description: "Get the power informations."
+      operationId: "powerGET"
+      parameters: []
+      responses:
+        200:
+          description: "The current informations about the power."
+          schema:
+            $ref: "#/definitions/Power"
+        default:
+          description: "Unexpected error"
+          schema:
+            $ref: "#/definitions/Error"
+      x-swagger-router-controller: "Power"
+  /power/inverse:
+    get:
+      tags:
+      - "Power"
+      summary: "Power'inverse."
+      description: "Get the power's inverse."
+      operationId: "powerInverseGET"
+      parameters: []
+      responses:
+        200:
+          description: "The current value of inverse."
+          schema:
+            type: "string"
+        default:
+          description: "Unexpected error"
+          schema:
+            $ref: "#/definitions/Error"
+      x-swagger-router-controller: "Power"
+    post:
+      tags:
+      - "Power"
+      summary: "Power inverse' informations ."
+      description: "Set the power inverse."
+      operationId: "powerInversePOST"
+      responses:
+        202:
+          description: "The current informations about the power."
+          schema:
+            type: "string"
+        default:
+          description: "Unexpected error"
+          schema:
+            $ref: "#/definitions/Error"
+      x-swagger-router-controller: "Power"
+  /power/strength:
+    get:
+      tags:
+      - "Power"
+      summary: "Power'strength."
+      description: "Get the power's strength."
+      operationId: "powerStrengthGET"
+      parameters: []
+      responses:
+        200:
+          description: "The current strenght of the power in percentage."
+          schema:
+            type: "string"
+        default:
+          description: "Unexpected error"
+          schema:
+            $ref: "#/definitions/Error"
+      x-swagger-router-controller: "Power"
+    post:
+      tags:
+      - "Power"
+      summary: "Power' strenght."
+      description: "Set power' strength."
+      operationId: "powerStrengthPOST"
+      parameters:
+      - name: "strength"
+        in: "formData"
+        description: "integrer between 0 and 100."
+        required: true
+        type: "string"
+      responses:
+        202:
+          description: "The current informations about the power."
+          schema:
+            type: "string"
+        default:
+          description: "Unexpected error"
+          schema:
+            $ref: "#/definitions/Error"
+      x-swagger-router-controller: "Power"
+definitions:
+  Power:
+    type: "object"
+    properties:
+      strength:
+        type: "integer"
+        description: "Strength of the power."
+      inverse:
+        type: "boolean"
+        description: "Direction of the power."
+  Error:
+    type: "object"
+    properties:
+      code:
+        type: "integer"
+        format: "int32"
+      message:
+        type: "string"
+      fields:
+        type: "string"
